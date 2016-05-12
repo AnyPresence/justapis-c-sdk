@@ -288,6 +288,13 @@ ja_result ja_perform_request(ja_gateway *gateway, const ja_request *request,
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     }
 
+#if JA_ENABLE_PUBLIC_KEY_PINNING
+    if (gateway->pinned_public_key)
+    {
+        curl_easy_setopt(curl, CURLOPT_PINNEDPUBLICKEY, gateway->pinned_public_key);
+    }
+#endif
+
     // 4. Perform CURL request
     CURLcode curl_error = curl_easy_perform(curl);
 
@@ -750,6 +757,13 @@ void populate_response_data(CURL *curl, const ja_request *request, ja_response *
 
     response->resolved_url = effective_url ? allocators.strdup(effective_url) : NULL;
 }
+
+#if JA_ENABLE_PUBLIC_KEY_PINNING
+void ja_gateway_set_pinned_public_key_file(ja_gateway* gateway, const char* key)
+{
+    gateway->pinned_public_key = allocators.strdup(key);
+}
+#endif
 
 /// Appends an new ja_key_value_pair to the library-managed list, creating head if head is NULL. Returns the head.
 ja_key_value_pair* ja_key_value_list_append(ja_key_value_pair* head, const char* key, const char* value)

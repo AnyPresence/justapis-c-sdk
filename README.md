@@ -227,8 +227,18 @@ On POST and PUT requests, you'll often want to send body data as part of those r
 You always have the option to set binary body data yourself using `ja_request_set_body`. Make sure to set a
 Content-Type header on the request as well!
 
-If you've left JSON support enabled, you can alternatively use `ja_request_set_json_body` which will automatically serialize your cJSON structure and set the Content-Type header appropriately.
+If you've left JSON support enabled, you can alternatively use `ja_request_set_json_body` which will automatically
+serialize your cJSON structure and set the Content-Type header appropriately.
 
+### Pinning Public Keys for HTTPS
+
+You may want to verify that you're connecting to the expected gateway when using HTTPS by specifying the public key you
+expect the server to report when the secure connection is made.
+
+To do so, provide the expected public key using the `ja_gateway_set_pinned_public_key_file` function before submitting
+any requests. You may provide a path to a PEM or DER file, or a specially formatted string of sha256 hashes. For more
+information on support formats for the key, see the libcurl documentation for
+[CURLOPT_PINNEDPUBLICKEY](https://curl.haxx.se/libcurl/c/CURLOPT_PINNEDPUBLICKEY.html).
 
 ### Memory Allocation
 
@@ -252,14 +262,15 @@ See [https://curl.haxx.se/libcurl/c/curl_global_init_mem.html] for more informat
 
 ### Streamlining the Build
 
-By default, the SDK builds in support for JSON and Response Caching. If you won't be using these, you can reduce the
-size of the library by disabling each of them with a build flag.
+By default, the SDK builds in support for JSON,  Response Caching and Public Key Pinning. If you won't be using these,
+you can reduce the size of the library by disabling each of them with a build flag.
 
-Make sure to set the build flag to `0` to disable the
-feature. Any non-zero value will leave the feature enabled, as will failure to set the flag at all.
+Make sure to set the build flag to `0` to disable the feature. Any non-zero value will leave the feature enabled,
+as will failure to set the flag at all.
 
-To disable JSON support, set `JA_ENABLE_CJSON` to `0`
-To disable Caching support, set `JA_ENABLE_RESPONSE_CACHING` to `0`
+* To disable JSON support, set `JA_ENABLE_CJSON` to `0`
+* To disable Caching support, set `JA_ENABLE_RESPONSE_CACHING` to `0`
+* To disable Public Key Pinning support, set `JA_ENABLE_PUBLIC_KEY_PINNING` to `0`
 
 ##Development
 
