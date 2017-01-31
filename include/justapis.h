@@ -441,6 +441,11 @@ typedef struct {
 ja_result ja_perform_request(ja_gateway *gateway, const ja_request *request,
                         const ja_request_callbacks *callbacks);
 
+/// Convenience
+/// ------
+
+char* ja_str_copy(const char* str);
+
 
 ///MQTT
 /// ------
