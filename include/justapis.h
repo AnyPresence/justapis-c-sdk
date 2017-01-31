@@ -443,14 +443,17 @@ ja_result ja_perform_request(ja_gateway *gateway, const ja_request *request,
 
 
 ///MQTT
+/// ------
 
-typedef enum {
+typedef enum
+{
     ja_mqtt_qos_0 = 0,
     ja_mqtt_qos_1,
     ja_mqtt_qos_2
 } ja_mqtt_qos;
 
-typedef enum {
+typedef enum
+{
     ja_mqtt_error_success = 0,
     ja_mqtt_error_unexpected = -1000
 } ja_mqtt_error;
