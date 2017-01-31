@@ -7,6 +7,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <mosquitto.h>
 
 /// Used to resolve default callbacks and userdata in ja_perform_request
 #define REQUEST_CALLBACK(field) ((callbacks && callbacks->field) ? callbacks->field : gateway->default_request_callbacks.field)
@@ -805,31 +806,41 @@ void ja_key_value_list_free(ja_key_value_pair* head)
 
 ja_simple_buffer* ja_simple_buffer_append(ja_simple_buffer* buffer, const char* data, size_t length)
 {
-    if (data == NULL || length == 0)
-    {
-        return buffer;
-    }
-    if (!buffer)
+    if (buffer == NULL)//Make a new buffer.
     {
         buffer = allocators.calloc(1, sizeof(ja_simple_buffer));
+        buffer->data = NULL;
+        buffer->data_length = 0;
     }
-    if (!buffer->data)
+    if (data != NULL && length > 0)
     {
-        // Allocate storage for all data, plus a convenient null terminator
-        buffer->data = allocators.malloc((length+1) * sizeof(char));
+        if (buffer->data == NULL)//If no existing data
+        {
+            // Allocate storage for all data, plus a convenient null terminator
+            buffer->data = allocators.malloc((length + 1) * sizeof(char));
+        }
+        else //If there is existing data, extend the storage
+        {
+            // Allocate storage for all data, plus a convenient null terminator
+            buffer->data = allocators.realloc(buffer->data, (buffer->data_length + length + 1) * sizeof(char));
+        }
+        memcpy(buffer->data + buffer->data_length, data, length);
+        buffer->data_length += length;
+        
+        // Always null terminate, for convenience. The first data_length bytes are raw storage, as provided.
+        buffer->data[buffer->data_length] = '\0';
     }
-    else
-    {
-        // Allocate storage for all data, plus a convenient null terminator
-        buffer->data = allocators.realloc(buffer->data, (buffer->data_length + length + 1) * sizeof(char));
-    }
-    memcpy(buffer->data + buffer->data_length, data, length);
-    buffer->data_length += length;
-
-    // Always null terminate, for convenience. The first data_length bytes are raw storage, as provided.
-    buffer->data[buffer->data_length] = '\0';
-
     return buffer;
+}
+
+ja_simple_buffer* ja_simple_buffer_copy(const ja_simple_buffer* buffer)
+{
+    ja_simple_buffer* new_buffer = NULL;
+    if (buffer != NULL)
+    {
+        new_buffer = ja_simple_buffer_append(NULL, buffer->data, buffer->data_length);
+    }
+    return new_buffer;
 }
 
 void ja_simple_buffer_free(ja_simple_buffer* buffer)
@@ -839,6 +850,8 @@ void ja_simple_buffer_free(ja_simple_buffer* buffer)
         if (buffer->data)
         {
             allocators.free(buffer->data);
+            buffer->data = NULL;
+            buffer->data_length = 0;
         }
         allocators.free(buffer);
     }
@@ -1473,5 +1486,424 @@ size_t ja_request_receive_headers_to_parsed_callback(
 }
 
 
+/// Convenience
 
+char* ja_str_copy(const char* str)
+{
+    char *new_str = NULL;
+    if (str != NULL)
+    {
+        size_t str_len = strlen(str);
+        new_str = allocators.malloc(sizeof(char) * (str_len + 1));
+        strcpy(new_str, str);
+    }
+    return new_str;
+}
 
+/// MQTT
+
+ja_mqtt_message* ja_mqtt_message_init(int mid, const char* topic, const char* data, size_t data_length, int qos, bool retain)
+{
+    ja_mqtt_message* message = allocators.malloc(sizeof(ja_mqtt_message));
+    message->mid = mid;
+    message->topic = ja_str_copy(topic);
+    message->payload = ja_simple_buffer_append(NULL, data, data_length);
+    message->qos = qos;
+    message->retain = retain;
+    return message;
+}
+
+ja_mqtt_message* ja_mqtt_message_copy(const ja_mqtt_message* message)
+{
+    ja_mqtt_message* new_message = NULL;
+    if (message != NULL)
+    {
+        char* data = NULL;
+        size_t data_length = 0;
+        if (message->payload != NULL)
+        {
+            data = message->payload->data;
+            data_length = message->payload->data_length;
+        }
+        new_message = ja_mqtt_message_init(message->mid, message->topic, data, data_length, message->qos, message->retain);
+    }
+    return new_message;
+}
+
+void ja_mqtt_message_free(ja_mqtt_message* message)
+{
+    if (message != NULL)
+    {
+        if (message->topic != NULL)
+        {
+            allocators.free(message->topic);
+            message->topic = NULL;
+        }
+        if (message->payload != NULL)
+        {
+            allocators.free(message->payload);
+            message->payload = NULL;
+        }
+        allocators.free(message);
+    }
+}
+
+ja_mqtt_configuration* ja_mqtt_configuration_init(const char* host,
+                                                  unsigned short port,
+                                                  const char* client_id,
+                                                  const char* username,
+                                                  const char* password,
+                                                  unsigned int keep_alive,
+                                                  bool clean_session,
+                                                  const ja_mqtt_message* will_message,
+                                                  ja_mqtt_on_connect_callback* on_connect_callback,
+                                                  ja_mqtt_on_disconnect_callback* on_disconnect_callback,
+                                                  ja_mqtt_on_subscribe_callback* on_subscribe_callback,
+                                                  ja_mqtt_on_unsubscribe_callback* on_unsubscribe_callback,
+                                                  ja_mqtt_on_publish_callback* on_publish_callback,
+                                                  ja_mqtt_on_message_callback* on_message_callback)
+{
+    ja_mqtt_configuration *config = allocators.malloc(sizeof(ja_mqtt_configuration));
+    
+    config->host = ja_str_copy(host);
+    config->port = port;
+    config->client_id = ja_str_copy(client_id);
+    config->username = ja_str_copy(username);
+    config->password = ja_str_copy(password);
+    config->keep_alive = keep_alive;
+    config->clean_session = clean_session;
+    config->will_message = ja_mqtt_message_copy(will_message);
+    config->on_connect_callback = on_connect_callback;
+    config->on_disconnect_callback = on_disconnect_callback;
+    config->on_subscribe_callback = on_subscribe_callback;
+    config->on_unsubscribe_callback = on_unsubscribe_callback;
+    config->on_publish_callback = on_publish_callback;
+    config->on_message_callback = on_message_callback;
+    
+    return config;
+}
+
+ja_mqtt_configuration* ja_mqtt_configuration_default(const char* host, const char* username, const char* password)
+{
+    ja_mqtt_configuration* config = ja_mqtt_configuration_init(host, 1883, NULL, username, password, 3600, true, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    return config;
+}
+
+ja_mqtt_configuration* ja_mqtt_configuration_copy(const ja_mqtt_configuration* config)
+{
+    ja_mqtt_configuration* new_config = NULL;
+    if (config != NULL)
+    {
+        new_config = ja_mqtt_configuration_init(config->host,
+                                                config->port,
+                                                config->client_id,
+                                                config->username,
+                                                config->password,
+                                                config->keep_alive,
+                                                config->keep_alive,
+                                                config->will_message,
+                                                config->on_connect_callback,
+                                                config->on_disconnect_callback,
+                                                config->on_subscribe_callback,
+                                                config->on_unsubscribe_callback,
+                                                config->on_publish_callback,
+                                                config->on_message_callback);
+    }
+    return new_config;
+}
+
+void ja_mqtt_configuration_free(ja_mqtt_configuration* config)
+{
+    if (config->host != NULL)
+    {
+        allocators.free(config->host);
+        config->host = NULL;
+    }
+    //port is non-pointer.
+    if (config->client_id != NULL)
+    {
+        allocators.free(config->client_id);
+        config->client_id = NULL;
+    }
+    if (config->username != NULL)
+    {
+        allocators.free(config->username);
+        config->username = NULL;
+    }
+    if (config->password != NULL)
+    {
+        allocators.free(config->password);
+        config->password = NULL;
+    }
+    //keep_alive is non-pointer.
+    //clean_session is non-pointer.
+    if (config->will_message != NULL)
+    {
+        ja_mqtt_message_free(config->will_message);
+        config->will_message = NULL;
+    }
+    config->on_connect_callback = NULL;
+    config->on_disconnect_callback = NULL;
+    config->on_subscribe_callback = NULL;
+    config->on_unsubscribe_callback = NULL;
+    config->on_publish_callback = NULL;
+    config->on_message_callback = NULL;
+}
+
+struct _ja_mqtt_connection
+{
+    struct mosquitto *mosq;
+    ja_mqtt_configuration* config;
+};
+
+/// Private
+
+static bool mqtt_lib_initialized;
+
+void ja_initialize_mqttlib()
+{
+    if (!mqtt_lib_initialized)
+    {
+        mosquitto_lib_init();
+        mqtt_lib_initialized = true;
+    }
+}
+
+/// MOSQ Callbacks
+
+void mosq_on_connect(struct mosquitto* mosq, void* obj, int error)
+{
+    int errValue = error;
+    ja_mqtt_connection* connection = (ja_mqtt_connection *)obj;
+    if (connection != NULL && connection->mosq == mosq && connection->config != NULL)
+    {
+        if (errValue == MOSQ_ERR_SUCCESS)
+        {
+            errValue = mosquitto_loop_start(connection->mosq);
+        }
+        if (connection->config->on_connect_callback != NULL)
+        {
+            connection->config->on_connect_callback(connection, errValue);
+        }
+    }
+}
+
+void mosq_on_disconnect(struct mosquitto* mosq, void* obj, int error)
+{
+    ja_mqtt_connection* connection = (ja_mqtt_connection *)obj;
+    if (connection != NULL && connection->mosq == mosq && connection->config != NULL)
+    {
+        if (connection->config->on_disconnect_callback != NULL)
+        {
+            connection->config->on_disconnect_callback(connection, error);
+        }
+    }
+}
+
+void mosq_on_subscribe(struct mosquitto* mosq, void* obj, int mid, int granted_qos_count, const int* granted_qos)
+{
+    ja_mqtt_connection* connection = (ja_mqtt_connection *)obj;
+    if (connection != NULL && connection->mosq == mosq && connection->config != NULL)
+    {
+        if (connection->config->on_subscribe_callback != NULL)
+        {
+            connection->config->on_subscribe_callback(connection, mid, granted_qos, granted_qos_count);
+        }
+    }
+}
+
+void mosq_on_unsubscribe(struct mosquitto* mosq, void* obj, int mid)
+{
+    ja_mqtt_connection* connection = (ja_mqtt_connection *)obj;
+    if (connection != NULL && connection->mosq == mosq && connection->config != NULL)
+    {
+        if (connection->config->on_unsubscribe_callback != NULL)
+        {
+            connection->config->on_unsubscribe_callback(connection, mid);
+        }
+    }
+}
+
+void mosq_on_publish(struct mosquitto* mosq, void* obj, int mid)
+{
+    ja_mqtt_connection* connection = (ja_mqtt_connection *)obj;
+    if (connection != NULL && connection->mosq == mosq && connection->config != NULL)
+    {
+        if (connection->config->on_publish_callback != NULL)
+        {
+            connection->config->on_publish_callback(connection, mid);
+        }
+    }
+}
+
+void mosq_on_message(struct mosquitto * mosq, void *obj, const struct mosquitto_message *message)
+{
+    ja_mqtt_connection* connection = (ja_mqtt_connection *)obj;
+    if (connection != NULL && connection->mosq == mosq && connection->config != NULL && message != NULL)
+    {
+        if (connection->config->on_message_callback != NULL)
+        {
+            ja_mqtt_message* msg = ja_mqtt_message_init(message->mid, message->topic, (char *)message->payload, message->payloadlen, message->qos, message->retain);
+            connection->config->on_message_callback(connection, msg);
+            ja_mqtt_message_free(msg);
+        }
+    }
+}
+
+/// Connection Related Functions
+
+ja_mqtt_connection* ja_mqtt_connection_init(ja_mqtt_configuration* config, int* error)
+{
+    //Initialize Lib
+    ja_initialize_mqttlib();
+    
+    //Initilize Return Values
+    int errValue = ja_mqtt_error_success;
+    ja_mqtt_connection* connection = NULL;
+    if (config != NULL)
+    {
+        connection = allocators.malloc(sizeof(ja_mqtt_connection));
+        connection->mosq = NULL;
+        connection->config = ja_mqtt_configuration_copy(config);
+        
+        struct mosquitto *mosq = mosquitto_new(config->client_id, config->clean_session, connection);
+        if (mosq != NULL)
+        {
+            connection->mosq = mosq;
+            if (config->will_message != NULL)
+            {
+                ja_mqtt_message will_message = *(config->will_message);
+                errValue = mosquitto_will_set(connection->mosq, will_message.topic, (int)will_message.payload->data_length, will_message.payload->data, will_message.qos, will_message.retain);
+                if (errValue == MOSQ_ERR_SUCCESS)
+                {
+                    errValue = mosquitto_username_pw_set(connection->mosq, config->username, config->password);
+                    if (errValue == MOSQ_ERR_SUCCESS)
+                    {
+                        mosquitto_connect_callback_set(connection->mosq, mosq_on_connect);
+                        mosquitto_disconnect_callback_set(connection->mosq, mosq_on_disconnect);
+                        mosquitto_subscribe_callback_set(connection->mosq, mosq_on_subscribe);
+                        mosquitto_unsubscribe_callback_set(connection->mosq, mosq_on_unsubscribe);
+                        mosquitto_publish_callback_set(connection->mosq, mosq_on_publish);
+                        mosquitto_message_callback_set(connection->mosq, mosq_on_message);
+                    }
+                }
+            }
+        }
+        else {
+            errValue = ja_mqtt_error_unexpected;
+        }
+    }
+    else
+    {
+        errValue = MOSQ_ERR_INVAL;
+    }
+    //Return Values
+    if (errValue != ja_mqtt_error_success)//We had an error
+    {
+        if (connection != NULL)//We had allocated connection
+        {
+            ja_mqtt_connection_free(connection);
+            connection = NULL;
+        }
+    }
+    if (error != NULL)
+    {
+        *error = errValue;
+    }
+    return connection;
+}
+
+void ja_mqtt_connection_free(ja_mqtt_connection* connection)
+{
+    if (connection != NULL)
+    {
+        if (connection->mosq != NULL)
+        {//We had mosquitto instance
+            mosquitto_destroy(connection->mosq);
+            connection->mosq = NULL;
+        }
+        if (connection->config != NULL)
+        {
+            ja_mqtt_configuration_free(connection->config);
+            connection->config = NULL;
+        }
+        allocators.free(connection);
+    }
+}
+
+int ja_mqtt_connect(ja_mqtt_connection* connection)
+{
+    int errValue = ja_mqtt_error_success;
+    if (connection != NULL && connection->mosq != NULL && connection->config != NULL)
+    {
+        if (errValue == MOSQ_ERR_SUCCESS)
+        {
+            errValue = mosquitto_connect_async(connection->mosq, connection->config->host, connection->config->port, connection->config->keep_alive);
+        }
+    }
+    else {
+        errValue = MOSQ_ERR_INVAL;
+    }
+    return errValue;
+}
+
+int ja_mqtt_disconnect(ja_mqtt_connection* connection)
+{
+    int errValue = ja_mqtt_error_success;
+    if (connection != NULL && connection->mosq != NULL && connection->config != NULL)
+    {
+        mosquitto_disconnect(connection->mosq);
+    }
+    else {
+        errValue = MOSQ_ERR_INVAL;
+    }
+    return errValue;
+}
+
+int ja_mqtt_subscribe(ja_mqtt_connection* connection, const char* topic, int qos, int* mid)
+{
+    int errValue = ja_mqtt_error_success;
+    if (connection != NULL && connection->mosq != NULL && connection->config != NULL && topic != NULL)
+    {
+        errValue = mosquitto_sub_topic_check(topic);
+        if (errValue != MOSQ_ERR_SUCCESS) {
+            errValue = mosquitto_subscribe(connection->mosq, mid, topic, qos);
+        }
+    }
+    else {
+        errValue = MOSQ_ERR_INVAL;
+    }
+    return errValue;
+}
+
+int ja_mqtt_unsubscribe(ja_mqtt_connection* connection, const char* topic, int* mid)
+{
+    int errValue = ja_mqtt_error_success;
+    if (connection != NULL && connection->mosq != NULL && connection->config != NULL && topic != NULL)
+    {
+        errValue = mosquitto_sub_topic_check(topic);
+        if (errValue != MOSQ_ERR_SUCCESS) {
+            errValue = mosquitto_unsubscribe(connection->mosq, mid, topic);
+        }
+    }
+    else {
+        errValue = MOSQ_ERR_INVAL;
+    }
+    return errValue;
+}
+
+int ja_mqtt_publish(ja_mqtt_connection* connection, const char* topic, ja_simple_buffer* payload, int qos, bool retain, int* mid)
+{
+    int errValue = ja_mqtt_error_success;
+    if (connection != NULL && connection->mosq != NULL && connection->config != NULL && topic != NULL && payload != NULL)
+    {
+        errValue = mosquitto_pub_topic_check(topic);
+        if (errValue != MOSQ_ERR_SUCCESS) {
+            errValue = mosquitto_publish(connection->mosq, mid, topic, (int)payload->data_length, payload->data, qos, retain);
+        }
+    }
+    else {
+        errValue = MOSQ_ERR_INVAL;
+    }
+    return errValue;
+}

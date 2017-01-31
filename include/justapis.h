@@ -5,6 +5,7 @@
 #ifndef JUSTAPIS_H
 #define JUSTAPIS_H
 
+#include <stdbool.h>
 
 ///
 /// Build Options
@@ -190,9 +191,11 @@ typedef struct {
 /// Appends the provided data to the end of a buffer. If buffer is NULL, creates a new buffer. Returns the buffer.
 ja_simple_buffer* ja_simple_buffer_append(ja_simple_buffer* buffer, const char* data, size_t length);
 
+/// Creates a deep copy of the buffer. Returns NULL incase NULL is passed.
+ja_simple_buffer* ja_simple_buffer_copy(const ja_simple_buffer* buffer);
+
 /// Frees resources associated with a simple buffer
 void ja_simple_buffer_free(ja_simple_buffer* buffer);
-
 
 ///
 /// Request Callbacks
@@ -438,5 +441,112 @@ typedef struct {
 ja_result ja_perform_request(ja_gateway *gateway, const ja_request *request,
                         const ja_request_callbacks *callbacks);
 
+
+///MQTT
+
+typedef enum {
+    ja_mqtt_qos_0 = 0,
+    ja_mqtt_qos_1,
+    ja_mqtt_qos_2
+} ja_mqtt_qos;
+
+typedef enum {
+    ja_mqtt_error_success = 0,
+    ja_mqtt_error_unexpected = -1000
+} ja_mqtt_error;
+
+typedef struct
+{
+    int mid;
+    char* topic;
+    ja_simple_buffer* payload;
+    int qos;
+    bool retain;
+} ja_mqtt_message;
+
+/// Creates & returns a new message struct from the passed parameters.
+/// Deep copy of pointer-type parameters is made.
+/// Need to call `ja_mqtt_message_free` to release the memory allocated for struct & its pointer-type members.
+ja_mqtt_message* ja_mqtt_message_init(int mid, const char* topic, const char* data, size_t data_length, int qos, bool retain);
+
+/// Creates & returns a deep copy of the message struct.
+/// Need to call `ja_mqtt_message_free` to release the memory allocated for struct & its pointer-type members.
+ja_mqtt_message* ja_mqtt_message_copy(const ja_mqtt_message* message);
+
+/// Releases the memory allocated for struct & its pointer-type members.
+void ja_mqtt_message_free(ja_mqtt_message* message);
+
+struct _ja_mqtt_connection;
+typedef struct _ja_mqtt_connection ja_mqtt_connection;
+
+/// Callbacks for MQTT events.
+/// See `ja_mqtt_error` & `mosq_err_t` in `mosquitto.h` for possible values for error.
+/// Any parameters passed have ownership with the API code.
+/// Make a deep copy in case you need to use the parameters after callback has returned.
+typedef void (ja_mqtt_on_connect_callback)(ja_mqtt_connection* connection, int error);
+typedef void (ja_mqtt_on_disconnect_callback)(ja_mqtt_connection* connection, int error);
+typedef void (ja_mqtt_on_subscribe_callback)(ja_mqtt_connection* connection, int mid, const int* granted_qos, int granted_qos_count);
+typedef void (ja_mqtt_on_unsubscribe_callback)(ja_mqtt_connection* connection, int mid);
+typedef void (ja_mqtt_on_publish_callback)(ja_mqtt_connection* connection, int mid);
+typedef void (ja_mqtt_on_message_callback)(ja_mqtt_connection* connection, ja_mqtt_message* message);
+
+/// Configuration struct for MQTT Connection.
+typedef struct
+{
+    char* host;
+    unsigned short port;
+    char* client_id;
+    char* username;
+    char* password;
+    unsigned int keep_alive;
+    bool clean_session;
+    ja_mqtt_message* will_message;
+    
+    ja_mqtt_on_connect_callback* on_connect_callback;
+    ja_mqtt_on_disconnect_callback* on_disconnect_callback;
+    ja_mqtt_on_subscribe_callback* on_subscribe_callback;
+    ja_mqtt_on_unsubscribe_callback* on_unsubscribe_callback;
+    ja_mqtt_on_publish_callback* on_publish_callback;
+    ja_mqtt_on_message_callback* on_message_callback;
+} ja_mqtt_configuration;
+
+/// Creates & returns a new configuration struct from the passed parameters.
+/// Deep copy of pointer-type parameters is made.
+/// Need to call `ja_mqtt_configuration_free` to release the memory allocated for struct & its pointer-type members.
+ja_mqtt_configuration* ja_mqtt_configuration_init(const char* host,
+                                                  unsigned short port,
+                                                  const char* client_id,
+                                                  const char* username,
+                                                  const char* password,
+                                                  unsigned int keep_alive,
+                                                  bool clean_session,
+                                                  const ja_mqtt_message* will_message,
+                                                  ja_mqtt_on_connect_callback* on_connect_callback,
+                                                  ja_mqtt_on_disconnect_callback* on_disconnect_callback,
+                                                  ja_mqtt_on_subscribe_callback* on_subscribe_callback,
+                                                  ja_mqtt_on_unsubscribe_callback* on_unsubscribe_callback,
+                                                  ja_mqtt_on_publish_callback* on_publish_callback,
+                                                  ja_mqtt_on_message_callback* on_message_callback);
+
+/// Creates & returns a new configuration struct from the passed parameters.
+/// Deep copy of pointer-type parameters is made.
+/// Need to call `ja_mqtt_configuration_free` to release the memory allocated for struct & its pointer-type members.
+ja_mqtt_configuration* ja_mqtt_configuration_default(const char* host, const char* username, const char* password);
+
+/// Creates & returns a deep copy of the configuration struct.
+/// Need to call `ja_mqtt_message_free` to release the memory allocated for struct & its pointer-type members.
+ja_mqtt_configuration* ja_mqtt_configuration_copy(const ja_mqtt_configuration* config);
+
+/// Releases the memory allocated for struct & its pointer-type members.
+void ja_mqtt_configuration_free(ja_mqtt_configuration* config);
+
+/// Creates & returns a new connection struct from the passed parameters.
+/// Deep copy of pointer-type parameters is made.
+/// `error` parameter can be used to get info about error.
+/// See `ja_mqtt_error` & `mosq_err_t` in `mosquitto.h` for possible values of error.
+ja_mqtt_connection* ja_mqtt_connection_init(ja_mqtt_configuration* config, int* error);
+
+/// Releases the memory allocated for struct & its pointer-type members.
+void ja_mqtt_connection_free(ja_mqtt_connection* connection);
 
 #endif //JUSTAPIS_H
