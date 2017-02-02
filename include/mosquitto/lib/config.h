@@ -9,5 +9,6 @@
 #ifndef config_h
 #define config_h
 
+#define WITH_THREADING 1
 
 #endif /* config_h */

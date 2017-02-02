@@ -809,7 +809,7 @@ ja_simple_buffer* ja_simple_buffer_append(ja_simple_buffer* buffer, const char* 
     if (buffer == NULL)//Make a new buffer.
     {
         buffer = allocators.calloc(1, sizeof(ja_simple_buffer));
-        buffer->data = NULL;
+        buffer->data = allocators.calloc(1, sizeof(char));
         buffer->data_length = 0;
     }
     if (data != NULL && length > 0)
@@ -1671,16 +1671,12 @@ void ja_initialize_mqttlib()
 
 /// MOSQ Callbacks
 
-void mosq_on_connect(struct mosquitto* mosq, void* obj, int error)
+void ja_on_connect_mosq_callback(struct mosquitto* mosq, void* obj, int error)
 {
     int errValue = error;
     ja_mqtt_connection* connection = (ja_mqtt_connection *)obj;
     if (connection != NULL && connection->mosq == mosq && connection->config != NULL)
     {
-        if (errValue == MOSQ_ERR_SUCCESS)
-        {
-            errValue = mosquitto_loop_start(connection->mosq);
-        }
         if (connection->config->on_connect_callback != NULL)
         {
             connection->config->on_connect_callback(connection, errValue);
@@ -1688,7 +1684,7 @@ void mosq_on_connect(struct mosquitto* mosq, void* obj, int error)
     }
 }
 
-void mosq_on_disconnect(struct mosquitto* mosq, void* obj, int error)
+void ja_on_disconnect_mosq_callback(struct mosquitto* mosq, void* obj, int error)
 {
     ja_mqtt_connection* connection = (ja_mqtt_connection *)obj;
     if (connection != NULL && connection->mosq == mosq && connection->config != NULL)
@@ -1700,7 +1696,7 @@ void mosq_on_disconnect(struct mosquitto* mosq, void* obj, int error)
     }
 }
 
-void mosq_on_subscribe(struct mosquitto* mosq, void* obj, int mid, int granted_qos_count, const int* granted_qos)
+void ja_on_subscribe_mosq_callback(struct mosquitto* mosq, void* obj, int mid, int granted_qos_count, const int* granted_qos)
 {
     ja_mqtt_connection* connection = (ja_mqtt_connection *)obj;
     if (connection != NULL && connection->mosq == mosq && connection->config != NULL)
@@ -1712,7 +1708,7 @@ void mosq_on_subscribe(struct mosquitto* mosq, void* obj, int mid, int granted_q
     }
 }
 
-void mosq_on_unsubscribe(struct mosquitto* mosq, void* obj, int mid)
+void ja_on_unsubscribe_mosq_callback(struct mosquitto* mosq, void* obj, int mid)
 {
     ja_mqtt_connection* connection = (ja_mqtt_connection *)obj;
     if (connection != NULL && connection->mosq == mosq && connection->config != NULL)
@@ -1724,7 +1720,7 @@ void mosq_on_unsubscribe(struct mosquitto* mosq, void* obj, int mid)
     }
 }
 
-void mosq_on_publish(struct mosquitto* mosq, void* obj, int mid)
+void ja_on_publish_mosq_callback(struct mosquitto* mosq, void* obj, int mid)
 {
     ja_mqtt_connection* connection = (ja_mqtt_connection *)obj;
     if (connection != NULL && connection->mosq == mosq && connection->config != NULL)
@@ -1736,7 +1732,7 @@ void mosq_on_publish(struct mosquitto* mosq, void* obj, int mid)
     }
 }
 
-void mosq_on_message(struct mosquitto * mosq, void *obj, const struct mosquitto_message *message)
+void ja_on_message_mosq_callback(struct mosquitto * mosq, void *obj, const struct mosquitto_message *message)
 {
     ja_mqtt_connection* connection = (ja_mqtt_connection *)obj;
     if (connection != NULL && connection->mosq == mosq && connection->config != NULL && message != NULL)
@@ -1774,19 +1770,19 @@ ja_mqtt_connection* ja_mqtt_connection_init(ja_mqtt_configuration* config, int* 
             {
                 ja_mqtt_message will_message = *(config->will_message);
                 errValue = mosquitto_will_set(connection->mosq, will_message.topic, (int)will_message.payload->data_length, will_message.payload->data, will_message.qos, will_message.retain);
-                if (errValue == MOSQ_ERR_SUCCESS)
-                {
-                    errValue = mosquitto_username_pw_set(connection->mosq, config->username, config->password);
-                    if (errValue == MOSQ_ERR_SUCCESS)
-                    {
-                        mosquitto_connect_callback_set(connection->mosq, mosq_on_connect);
-                        mosquitto_disconnect_callback_set(connection->mosq, mosq_on_disconnect);
-                        mosquitto_subscribe_callback_set(connection->mosq, mosq_on_subscribe);
-                        mosquitto_unsubscribe_callback_set(connection->mosq, mosq_on_unsubscribe);
-                        mosquitto_publish_callback_set(connection->mosq, mosq_on_publish);
-                        mosquitto_message_callback_set(connection->mosq, mosq_on_message);
-                    }
-                }
+            }
+            if (errValue == MOSQ_ERR_SUCCESS)
+            {
+                errValue = mosquitto_username_pw_set(connection->mosq, config->username, config->password);
+            }
+            if (errValue == MOSQ_ERR_SUCCESS)
+            {
+                mosquitto_connect_callback_set(connection->mosq, ja_on_connect_mosq_callback);
+                mosquitto_disconnect_callback_set(connection->mosq, ja_on_disconnect_mosq_callback);
+                mosquitto_subscribe_callback_set(connection->mosq, ja_on_subscribe_mosq_callback);
+                mosquitto_unsubscribe_callback_set(connection->mosq, ja_on_unsubscribe_mosq_callback);
+                mosquitto_publish_callback_set(connection->mosq, ja_on_publish_mosq_callback);
+                mosquitto_message_callback_set(connection->mosq, ja_on_message_mosq_callback);
             }
         }
         else {
@@ -1836,16 +1832,69 @@ int ja_mqtt_connect(ja_mqtt_connection* connection)
     int errValue = ja_mqtt_error_success;
     if (connection != NULL && connection->mosq != NULL && connection->config != NULL)
     {
-        if (errValue == MOSQ_ERR_SUCCESS)
-        {
-            errValue = mosquitto_connect_async(connection->mosq, connection->config->host, connection->config->port, connection->config->keep_alive);
-        }
+        errValue = mosquitto_connect(connection->mosq, connection->config->host, connection->config->port, connection->config->keep_alive);
     }
     else {
         errValue = MOSQ_ERR_INVAL;
     }
     return errValue;
 }
+
+int ja_mqtt_loop(ja_mqtt_connection* connection, int timeout)
+{
+    int errValue = ja_mqtt_error_success;
+    if (connection != NULL && connection->mosq != NULL && connection->config != NULL)
+    {
+        errValue = mosquitto_loop(connection->mosq, timeout, 1);
+    }
+    else {
+        errValue = MOSQ_ERR_INVAL;
+    }
+    return errValue;
+}
+
+int ja_mqtt_loop_forever(ja_mqtt_connection* connection)
+{
+    int errValue = ja_mqtt_error_success;
+    if (connection != NULL && connection->mosq != NULL && connection->config != NULL)
+    {
+        errValue = mosquitto_loop_forever(connection->mosq, -1, 1);
+    }
+    else {
+        errValue = MOSQ_ERR_INVAL;
+    }
+    return errValue;
+}
+
+#ifdef WITH_THREADING
+
+int ja_mqtt_loop_start(ja_mqtt_connection* connection)
+{
+    int errValue = ja_mqtt_error_success;
+    if (connection != NULL && connection->mosq != NULL && connection->config != NULL)
+    {
+        errValue = mosquitto_loop_start(connection->mosq);
+    }
+    else {
+        errValue = MOSQ_ERR_INVAL;
+    }
+    return errValue;
+}
+
+int ja_mqtt_loop_stop(ja_mqtt_connection* connection, bool force)
+{
+    int errValue = ja_mqtt_error_success;
+    if (connection != NULL && connection->mosq != NULL && connection->config != NULL)
+    {
+        errValue = mosquitto_loop_stop(connection->mosq, force);
+    }
+    else {
+        errValue = MOSQ_ERR_INVAL;
+    }
+    return errValue;
+}
+
+#endif
 
 int ja_mqtt_disconnect(ja_mqtt_connection* connection)
 {
@@ -1866,7 +1915,7 @@ int ja_mqtt_subscribe(ja_mqtt_connection* connection, const char* topic, int qos
     if (connection != NULL && connection->mosq != NULL && connection->config != NULL && topic != NULL)
     {
         errValue = mosquitto_sub_topic_check(topic);
-        if (errValue != MOSQ_ERR_SUCCESS) {
+        if (errValue == MOSQ_ERR_SUCCESS) {
             errValue = mosquitto_subscribe(connection->mosq, mid, topic, qos);
         }
     }
@@ -1882,7 +1931,7 @@ int ja_mqtt_unsubscribe(ja_mqtt_connection* connection, const char* topic, int* 
     if (connection != NULL && connection->mosq != NULL && connection->config != NULL && topic != NULL)
     {
         errValue = mosquitto_sub_topic_check(topic);
-        if (errValue != MOSQ_ERR_SUCCESS) {
+        if (errValue == MOSQ_ERR_SUCCESS) {
             errValue = mosquitto_unsubscribe(connection->mosq, mid, topic);
         }
     }
@@ -1898,7 +1947,7 @@ int ja_mqtt_publish(ja_mqtt_connection* connection, const char* topic, ja_simple
     if (connection != NULL && connection->mosq != NULL && connection->config != NULL && topic != NULL && payload != NULL)
     {
         errValue = mosquitto_pub_topic_check(topic);
-        if (errValue != MOSQ_ERR_SUCCESS) {
+        if (errValue == MOSQ_ERR_SUCCESS) {
             errValue = mosquitto_publish(connection->mosq, mid, topic, (int)payload->data_length, payload->data, qos, retain);
         }
     }

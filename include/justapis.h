@@ -6,6 +6,7 @@
 #define JUSTAPIS_H
 
 #include <stdbool.h>
+#include <config.h>
 
 ///
 /// Build Options
@@ -556,5 +557,67 @@ ja_mqtt_connection* ja_mqtt_connection_init(ja_mqtt_configuration* config, int* 
 
 /// Releases the memory allocated for struct & its pointer-type members.
 void ja_mqtt_connection_free(ja_mqtt_connection* connection);
+
+/// Initiates the connection to MQTT Broker.
+/// `on_connect_callback` will be called when connection is established.
+/// Returns error code to indicate the result i.e. whether request was initiated or reason for failure.
+/// See `ja_mqtt_error` & `mosq_err_t` in `mosquitto.h` for possible values of error code.
+int ja_mqtt_connect(ja_mqtt_connection* connection);
+
+/// Runs once the main network loop for the client. You must call this frequently in order
+/// to keep communications between the client and broker working.
+/// Returns error code to indicate the result.
+/// See `ja_mqtt_error` & `mosq_err_t` in `mosquitto.h` for possible values of error code.
+int ja_mqtt_loop(ja_mqtt_connection* connection, int timeout);
+
+/// Continously runs the main network loop for the client.
+/// If you call disconnect in one of the callbacks, this will return.
+/// Returns error code to indicate the result.
+/// See `ja_mqtt_error` & `mosq_err_t` in `mosquitto.h` for possible values of error code.
+/// Returns error code to indicate the result.
+/// See `ja_mqtt_error` & `mosq_err_t` in `mosquitto.h` for possible values of error code.
+int ja_mqtt_loop_forever(ja_mqtt_connection* connection);
+
+#ifdef WITH_THREADING
+
+/// Starts the main network loop for the client in a separate thread.
+/// Returns error code to indicate the result.
+/// See `ja_mqtt_error` & `mosq_err_t` in `mosquitto.h` for possible values of error code.
+int ja_mqtt_loop_start(ja_mqtt_connection* connection);
+
+/// Stops the main network loop for the client.
+/// Returns error code to indicate the result.
+/// You should do this after disconnection or send force = true.
+/// See `ja_mqtt_error` & `mosq_err_t` in `mosquitto.h` for possible values of error code.
+int ja_mqtt_loop_stop(ja_mqtt_connection* connection, bool force);
+
+#endif
+
+/// Initiates the disconnection from MQTT Broker.
+/// `on_disconnect_callback` will be called when disconnected.
+/// Returns error code to indicate the result i.e. whether request was initiated or reason for failure.
+/// See `ja_mqtt_error` & `mosq_err_t` in `mosquitto.h` for possible values of error code.
+int ja_mqtt_disconnect(ja_mqtt_connection* connection);
+
+/// Initiates the request to subscribe to passed topic with qos.
+/// `on_subscribe_callback` will be called when subscribed.
+/// `mid` parameter is optional, can be used to get back message id.
+/// Returns error code to indicate the result i.e. whether request was initiated or reason for failure.
+/// See `ja_mqtt_error` & `mosq_err_t` in `mosquitto.h` for possible values of error code.
+int ja_mqtt_subscribe(ja_mqtt_connection* connection, const char* topic, int qos, int* mid);
+
+/// Initiates the request to unsubscribe from passed topic.
+/// `on_unsubscribe_callback` will be called when unsubscribed.
+/// `mid` parameter is optional, can be used to get back message id.
+/// Returns error code to indicate the result i.e. whether request was initiated or reason for failure.
+/// See `ja_mqtt_error` & `mosq_err_t` in `mosquitto.h` for possible values of error code.
+int ja_mqtt_unsubscribe(ja_mqtt_connection* connection, const char* topic, int* mid);
+
+/// Initiates the request to publish payload to topic with qos & retain.
+/// `on_publish_callback` will be called when published.
+/// `mid` parameter is optional, can be used to get back message id.
+/// Returns error code to indicate the result i.e. whether request was initiated or reason for failure.
+/// See `ja_mqtt_error` & `mosq_err_t` in `mosquitto.h` for possible values of error code.
+int ja_mqtt_publish(ja_mqtt_connection* connection, const char* topic, ja_simple_buffer* payload, int qos, bool retain, int* mid);
 
 #endif //JUSTAPIS_H
