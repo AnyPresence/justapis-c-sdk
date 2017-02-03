@@ -14,7 +14,7 @@ Contributors:
    Roger Light - initial implementation and documentation.
 */
 
-#include <config.h>
+#include "mosquitto_config.h"
 
 #include <stdlib.h>
 #include <string.h>

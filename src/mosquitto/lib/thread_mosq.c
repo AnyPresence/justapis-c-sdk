@@ -14,7 +14,7 @@ Contributors:
    Roger Light - initial implementation and documentation.
 */
 
-#include <config.h>
+#include "mosquitto_config.h"
 
 #ifndef WIN32
 #include <unistd.h>

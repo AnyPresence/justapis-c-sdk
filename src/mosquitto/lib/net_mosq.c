@@ -81,7 +81,7 @@ Contributors:
 #include <time_mosq.h>
 #include <util_mosq.h>
 
-#include "config.h"
+#include "mosquitto_config.h"
 
 #ifdef WITH_TLS
 int tls_ex_index_mosq = -1;

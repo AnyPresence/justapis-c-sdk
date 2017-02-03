@@ -6,7 +6,7 @@
 #define JUSTAPIS_H
 
 #include <stdbool.h>
-#include <config.h>
+#include "mosquitto_config.h"
 
 ///
 /// Build Options
