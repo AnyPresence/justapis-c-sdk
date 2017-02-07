@@ -1500,6 +1500,8 @@ char* ja_str_copy(const char* str)
     return new_str;
 }
 
+#if JA_ENABLE_MQTT
+
 /// MQTT
 
 ja_mqtt_message* ja_mqtt_message_init(int mid, const char* topic, const char* data, size_t data_length, int qos, bool retain)
@@ -1866,7 +1868,7 @@ int ja_mqtt_loop_forever(ja_mqtt_connection* connection)
     return errValue;
 }
 
-#ifdef WITH_THREADING
+#if JA_ENABLE_MQTT_WITH_THREADING
 
 int ja_mqtt_loop_start(ja_mqtt_connection* connection)
 {
@@ -1894,7 +1896,7 @@ int ja_mqtt_loop_stop(ja_mqtt_connection* connection, bool force)
     return errValue;
 }
 
-#endif
+#endif //JA_ENABLE_MQTT_WITH_THREADING
 
 int ja_mqtt_disconnect(ja_mqtt_connection* connection)
 {
@@ -1956,3 +1958,5 @@ int ja_mqtt_publish(ja_mqtt_connection* connection, const char* topic, ja_simple
     }
     return errValue;
 }
+
+#endif //JA_ENABLE_MQTT

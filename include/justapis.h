@@ -5,50 +5,21 @@
 #ifndef JUSTAPIS_H
 #define JUSTAPIS_H
 
-#include <stdbool.h>
-#include "mosquitto_config.h"
-
-///
-/// Build Options
-/// ------
-///
-
-/// JA_ENABLE_RESPONSE_CACHE
-/// 1: Build in support for automatic response caching (default)
-/// 0: Do not build in support for automatic response caching
-#ifndef JA_ENABLE_RESPONSE_CACHE
-  #define JA_ENABLE_RESPONSE_CACHE 1
-#endif
-
-/// JA_ENABLE_CJSON
-/// 1: Provides convenience features for JSON in requests and responses, using cJSON (default)
-/// 0: Removes convenience features for JSON in requests and responses.
-#ifndef JA_ENABLE_CJSON
-  #define JA_ENABLE_CJSON 1
-#endif
-
-/// JA_ENABLE_PUBLIC_KEY_PINNING
-/// 1: Provides fields and functions for public key pinning (default)
-/// 0: Removes fields and function for public key pinning
-#ifndef JA_ENABLE_PUBLIC_KEY_PINNING
-  #define JA_ENABLE_PUBLIC_KEY_PINNING 1
-#endif
-
-
 ///
 /// Includes
 /// ------
 ///
 
 #include <stdbool.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <sys/time.h>
+
+#include "mosquitto_config.h"
 
 #if JA_ENABLE_CJSON
   #include "cJSON.h"
 #endif
-
-
 
 ///
 /// Custom Allocators
@@ -447,6 +418,7 @@ ja_result ja_perform_request(ja_gateway *gateway, const ja_request *request,
 
 char* ja_str_copy(const char* str);
 
+#if JA_ENABLE_MQTT
 
 ///MQTT
 /// ------
@@ -578,7 +550,7 @@ int ja_mqtt_loop(ja_mqtt_connection* connection, int timeout);
 /// See `ja_mqtt_error` & `mosq_err_t` in `mosquitto.h` for possible values of error code.
 int ja_mqtt_loop_forever(ja_mqtt_connection* connection);
 
-#ifdef WITH_THREADING
+#if JA_ENABLE_MQTT_WITH_THREADING
 
 /// Starts the main network loop for the client in a separate thread.
 /// Returns error code to indicate the result.
@@ -591,7 +563,7 @@ int ja_mqtt_loop_start(ja_mqtt_connection* connection);
 /// See `ja_mqtt_error` & `mosq_err_t` in `mosquitto.h` for possible values of error code.
 int ja_mqtt_loop_stop(ja_mqtt_connection* connection, bool force);
 
-#endif
+#endif //JA_ENABLE_MQTT_WITH_THREADING
 
 /// Initiates the disconnection from MQTT Broker.
 /// `on_disconnect_callback` will be called when disconnected.
@@ -619,5 +591,7 @@ int ja_mqtt_unsubscribe(ja_mqtt_connection* connection, const char* topic, int* 
 /// Returns error code to indicate the result i.e. whether request was initiated or reason for failure.
 /// See `ja_mqtt_error` & `mosq_err_t` in `mosquitto.h` for possible values of error code.
 int ja_mqtt_publish(ja_mqtt_connection* connection, const char* topic, ja_simple_buffer* payload, int qos, bool retain, int* mid);
+
+#endif //JA_ENABLE_MQTT
 
 #endif //JUSTAPIS_H
