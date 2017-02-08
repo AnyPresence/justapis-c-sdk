@@ -7,7 +7,11 @@
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
+
+#if JA_ENABLE_MQTT
 #include <mosquitto.h>
+//Note for Error: Make sure you have added mosquitto/lib to Search Path.
+#endif //JA_ENABLE_MQTT
 
 /// Used to resolve default callbacks and userdata in ja_perform_request
 #define REQUEST_CALLBACK(field) ((callbacks && callbacks->field) ? callbacks->field : gateway->default_request_callbacks.field)
