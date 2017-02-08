@@ -11,7 +11,8 @@ set(JA_ENABLE_MQTT_WITH_THREADING 1)
 
 ##-------------------------
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror")
+#You can add '-Werror' after '-Wall' to turn all warning into errors.
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall") 
 
 ## Make sure we have necessary 'CURL' dependency installed
 FIND_PACKAGE(CURL)
