@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 project(justapis-c-sdk)
 
-## Build Options----------
+## Build Options
 
 set(JA_ENABLE_RESPONSE_CACHE 1)
 set(JA_ENABLE_CJSON 1)
@@ -9,9 +9,9 @@ set(JA_ENABLE_PUBLIC_KEY_PINNING 1)
 set(JA_ENABLE_MQTT 1)
 set(JA_ENABLE_MQTT_WITH_THREADING 1)
 
-##-------------------------
+## -------------------------
 
-#You can add '-Werror' after '-Wall' to turn all warning into errors.
+## You can add '-Werror' after '-Wall' to turn all warning into errors.
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall") 
 
 ## Make sure we have necessary 'CURL' dependency installed
@@ -23,20 +23,31 @@ ELSE(CURL_FOUND)
     MESSAGE(FATAL_ERROR "Could not find the CURL library and development files.")
 ENDIF(CURL_FOUND)
 
-## Make sure we have necessary 'Threads' dependencies installed
-set(CMAKE_THREAD_PREFER_PTHREAD ON)
-set(THREADS_PREFER_PTHREAD_FLAG ON)
-find_package (Threads REQUIRED)
 
-MESSAGE(STATUS "CMAKE_USE_PTHREADS_INIT: " ${CMAKE_USE_PTHREADS_INIT})
+## Make sure we have necessary 'Threads' dependencies installed(if needed)
+IF(JA_ENABLE_MQTT AND JA_ENABLE_MQTT_WITH_THREADING)
+	SET(JA_NEEDS_THREADS TRUE)
+ELSE()
+	SET(JA_NEEDS_THREADS FALSE)
+ENDIF()
+MESSAGE(STATUS "JA_NEEDS_THREADS: " ${JA_NEEDS_THREADS})
 
-if(NOT CMAKE_USE_PTHREADS_INIT)
-	MESSAGE(FATAL_ERROR "Could not find the pthread library and header files.")
-endif()
+IF(JA_NEEDS_THREADS)
+	## Try Finding pthread
+	set(CMAKE_THREAD_PREFER_PTHREAD ON)
+	set(THREADS_PREFER_PTHREAD_FLAG ON)
+	find_package (Threads REQUIRED)
 
+	MESSAGE(STATUS "CMAKE_USE_PTHREADS_INIT: " ${CMAKE_USE_PTHREADS_INIT})
+
+	IF(NOT CMAKE_USE_PTHREADS_INIT)
+		MESSAGE(FATAL_ERROR "Could not find the pthread library and header files.")
+	ENDIF(NOT CMAKE_USE_PTHREADS_INIT)
+ENDIF(JA_NEEDS_THREADS)
+
+#Config File
 set(JA_CONFIG_OUTPUT_PATH "${CMAKE_SOURCE_DIR}/include/ja_config.h")
 configure_file(include/ja_config.h.in ${JA_CONFIG_OUTPUT_PATH})
-
 MESSAGE(STATUS "ja_config.h generated at:" ${JA_CONFIG_OUTPUT_PATH})
 
 ##
@@ -68,8 +79,17 @@ set(LIB_SOURCE_FILES
 	include/mosquitto/lib/util_mosq.h src/mosquitto/lib/util_mosq.c
 	include/mosquitto/lib/will_mosq.h src/mosquitto/lib/will_mosq.c)
 
+#Source
 add_library(justapis-c-sdk ${LIB_SOURCE_FILES})
-target_link_libraries(justapis-c-sdk ${CURL_LIBRARIES} Threads::Threads)
+
+#Linking
+IF(JA_NEEDS_THREADS)
+	target_link_libraries(justapis-c-sdk ${CURL_LIBRARIES} Threads::Threads)
+ELSE(JA_NEEDS_THREADS)
+	target_link_libraries(justapis-c-sdk ${CURL_LIBRARIES})
+ENDIF(JA_NEEDS_THREADS)
+
+#Headers
 target_include_directories(justapis-c-sdk PUBLIC include include/mosquitto/lib)
 
 ##
