@@ -14,7 +14,7 @@ Lightweight C SDK to connect to a JustAPIs gateway.
 
 * **cJSON** [Optional, source included] The SDK can *optionally* provide simple JSON serialization when sending requests, and JSON deserialization when receiving responses. This feature is enabled by default and the source code for cJSON (`cJSON.h` and `cJSON.c`) is included and built into the library automatically.
 
-* **mosquitto** [Optional, source included] The SDK can *optionally* provide API to interact with MQTT Broker. This feature is enabled by default and the source code for mosquitto (`include/mosquitto/lib/*.h` and `src/mosquitto/lib/*.h.c`) is included and built into the library automatically. When `JA_ENABLE_MQTT_WITH_THREADING` is enabled, make sure that `pthread` is avaialable.
+* **mosquitto** [Optional, source included] The SDK can *optionally*(using `JA_ENABLE_MQTT` flag) provide API to interact with MQTT Broker. This feature is enabled by default and the source code for mosquitto (`include/mosquitto/lib/*.h` and `src/mosquitto/lib/*.h.c`) is included and built into the library automatically. When `JA_ENABLE_MQTT_WITH_THREADING` is enabled(default behavior), make sure that `pthread` is avaialable. See 'Setup' section for more details.
 
 ### Unit Testing
 
@@ -39,7 +39,7 @@ Optional MQTT support is provided using mosquitto:
 
 HTTP requests are handled through **libcurl**.
 
-You may build, install, and test the SDK as a library using CMake, or include the above files directly in your own project that links against libcurl.
+You may build, install, and test the SDK as a library using CMake, or include the above files directly in your own project. See 'Setup' section for more info.
 
 Three structs capture the core concepts of the SDK: `ja_gateway`, `ja_request`, and `ja_response`.
 
@@ -76,9 +76,9 @@ Of course, you can also download and install libcurl directly from its [develope
 
 #### pthread
 
-macOS: Available by default.
-linux: Available in most compilers like `gcc`.
-Windows: [See link](https://www.sourceware.org/pthreads-win32/)
+**macOS**: Available by default. No extra steps required when using *Xcode*. You will need to use `-lpthread` flag when compiling manually e.g. using command-line.
+**Linux**: Available in most distributions & compilers like `gcc`. You will need to use `-lpthread` linker flag.
+**Windows**: [See link](https://www.sourceware.org/pthreads-win32/)
 
 ### Using the SDK as a Library
 
@@ -90,7 +90,12 @@ Windows: [See link](https://www.sourceware.org/pthreads-win32/)
 
 The SDK is intentionally organized in a way that makes it easy for you to include it in your own project without linking it in as a library or relying on CMake.
 
-To take advantage of this, just include the following `include` & `src` folders in your project. Make sure to link against `libcurl` & that `include/mosquitto/lib` is in your search paths.
+To take advantage of this:
+
+1. Add `include` & `src` folders in your project. 
+2. Make sure to link against `libcurl`
+3. Optional: If `JA_ENABLE_MQTT` is enabled(default behavior), make sure `include/mosquitto/lib` is in your 'Search Paths' so its headers can be included using `#include <xxx>` syntax as well.
+4. Option: If both `JA_ENABLE_MQTT` & `JA_ENABLE_MQTT_WITH_THREADING` are enabled(default behavior), make sure `pthread.h` is included in search paths & to link against `pthread`. See `pthread` section for more details.
 
 You can optionally exclude the cJSON files if you don't want to use JSON or will be managing serialization and deserialization of JSON in your own code. If you do exclude these files, make sure to set the build flag `JA_ENABLE_CJSON` to `0`.
 
