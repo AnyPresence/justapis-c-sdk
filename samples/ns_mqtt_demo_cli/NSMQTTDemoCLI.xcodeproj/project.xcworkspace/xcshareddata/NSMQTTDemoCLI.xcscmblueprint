@@ -1,0 +1,30 @@
+{
+  "DVTSourceControlWorkspaceBlueprintPrimaryRemoteRepositoryKey" : "C86C1CB4F5E3FE89C5F8428DC93238D4B5615AF1",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyRepositoryLocationsKey" : {
+
+  },
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyStatesKey" : {
+    "C86C1CB4F5E3FE89C5F8428DC93238D4B5615AF1" : 9223372036854775807,
+    "CD4FE035C9546DEE9A63AB22D38C1C7DC070D95E" : 9223372036854775807
+  },
+  "DVTSourceControlWorkspaceBlueprintIdentifierKey" : "07D3C52D-A63A-4653-9482-C8BD295122C9",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyPathsKey" : {
+    "C86C1CB4F5E3FE89C5F8428DC93238D4B5615AF1" : "NS-C-SDK-DemoApps\/",
+    "CD4FE035C9546DEE9A63AB22D38C1C7DC070D95E" : "justapis-c-sdk\/"
+  },
+  "DVTSourceControlWorkspaceBlueprintNameKey" : "NSMQTTDemoCLI",
+  "DVTSourceControlWorkspaceBlueprintVersion" : 204,
+  "DVTSourceControlWorkspaceBlueprintRelativePathToProjectKey" : "NSMQTTDemoCLI\/NSMQTTDemoCLI.xcodeproj",
+  "DVTSourceControlWorkspaceBlueprintRemoteRepositoriesKey" : [
+    {
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryURLKey" : "github.com:ebricks\/NS-C-SDK-DemoApps.git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositorySystemKey" : "com.apple.dt.Xcode.sourcecontrol.Git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryIdentifierKey" : "C86C1CB4F5E3FE89C5F8428DC93238D4B5615AF1"
+    },
+    {
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryURLKey" : "github.com:ebricks\/justapis-c-sdk.git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositorySystemKey" : "com.apple.dt.Xcode.sourcecontrol.Git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryIdentifierKey" : "CD4FE035C9546DEE9A63AB22D38C1C7DC070D95E"
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 //
 //  ja_config.h
-//  justapis-c-sdk-xc
+//  justapis-c-sdk
 //
 //  Created by Taha Samad on 1/30/17.
 //  Copyright © 2017 Nanoscale. All rights reserved.
