@@ -113,4 +113,4 @@ add_test(NAME test
 ##
 set(NS_MQTT_DEMO_CLI_SOURCE_FILES samples/ns_mqtt_demo_cli/src/main.c)
 add_executable(ns-mqtt-demo-cli ${NS_MQTT_DEMO_CLI_SOURCE_FILES})
-target_link_libraries(ns-mqtt-demo-cli justapis-c-sdk)
+target_link_libraries(ns-mqtt-demo-cli justapis-c-sdk -ldl -lm)#-ldl -lm is required e.g on Linux(Ubuntu 16.04 LTS)
