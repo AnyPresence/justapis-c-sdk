@@ -8,7 +8,7 @@
 #ifndef mosquitto_config_h
 #define mosquitto_config_h
 
-#import "ja_config.h"
+#include "ja_config.h"
 
 #if JA_ENABLE_MQTT && JA_ENABLE_MQTT_WITH_THREADING
 #define WITH_THREADING 1
