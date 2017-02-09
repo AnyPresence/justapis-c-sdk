@@ -300,6 +300,7 @@ void on_unsubscribe(ja_mqtt_connection* connection, int mid)
     {
         //New Status
         char* status_msg = message_buffer_new();
+        subscribed = false;
         //Status Message
         sprintf(status_msg , "mid# %d -> Unsubscribe ACK\n", mid);
         set_new_status_message(status_msg);
