@@ -97,7 +97,7 @@ target_include_directories(justapis-c-sdk PUBLIC include include/mosquitto/lib)
 ##
 set(TEST_SOURCE_FILES test/tests.c test/cheat/cheat.h test/cheat/cheats.h test/civetweb/civetweb.c test/civetweb/md5.inl test/civetweb/handle_form.inl test/test_request_handlers.h test/test_request_handlers.c test/test_helpers.h test/test_helpers.c)
 add_executable(runTests ${TEST_SOURCE_FILES})
-target_link_libraries(runTests justapis-c-sdk -ldl -lm)
+target_link_libraries(runTests justapis-c-sdk -ldl -lm)#-ldl -lm is required e.g on Linux(Ubuntu 16.04 LTS)
 
 ##
 ## Enable a test target using CTEST that invokes the test target

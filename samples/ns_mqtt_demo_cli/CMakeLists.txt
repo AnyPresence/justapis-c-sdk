@@ -9,5 +9,5 @@ add_subdirectory (../.. justapis-c-sdk_cmake_bin_dir)
 # add the executable
 set(NS_MQTT_DEMO_CMAKE_CLI_SOURCE_FILES src/main.c)
 add_executable (ns-mqtt-demo-cmake-cli ${NS_MQTT_DEMO_CMAKE_CLI_SOURCE_FILES})
-target_link_libraries (ns-mqtt-demo-cmake-cli justapis-c-sdk)
+target_link_libraries (ns-mqtt-demo-cmake-cli justapis-c-sdk -ldl -lm)#-ldl -lm is required e.g on Linux(Ubuntu 16.04 LTS)
 target_include_directories (ns-mqtt-demo-cmake-cli PRIVATE ../../include ../../include/mosquitto/lib)
