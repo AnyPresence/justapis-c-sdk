@@ -105,3 +105,12 @@ target_link_libraries(runTests justapis-c-sdk -ldl -lm)
 enable_testing()
 add_test(NAME test
          COMMAND runTests)
+
+## Sample:
+
+##
+## Create the runable target, linking to the library
+##
+set(NS_MQTT_DEMO_CLI_SOURCE_FILES samples/ns_mqtt_demo_cli/src/main.c)
+add_executable(ns-mqtt-demo-cli ${NS_MQTT_DEMO_CLI_SOURCE_FILES})
+target_link_libraries(ns-mqtt-demo-cli justapis-c-sdk)

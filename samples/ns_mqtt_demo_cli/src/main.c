@@ -58,7 +58,7 @@ char* message_buffer_new()
 void print_current_instruction_message_and_input_string()
 {
     if (current_instruction_message != NULL) {
-        printf("%s: ", current_instruction_message);
+        printf("%s:\n", current_instruction_message);
     }
     if (current_input_string != NULL && current_input_string->data_length > 0)
     {

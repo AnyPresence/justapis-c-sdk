@@ -43,7 +43,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		2E75E2DB1E3F2ED400C4AF13 /* NSMQTTDemoCLI */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = NSMQTTDemoCLI; sourceTree = BUILT_PRODUCTS_DIR; };
+		2E75E2DB1E3F2ED400C4AF13 /* ns-mqtt-demo-cli */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "ns-mqtt-demo-cli"; sourceTree = BUILT_PRODUCTS_DIR; };
 		2E75E3821E40B64700C4AF13 /* libcurl.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libcurl.tbd; path = usr/lib/libcurl.tbd; sourceTree = SDKROOT; };
 		2E75E3DF1E41B4A600C4AF13 /* cJSON.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = cJSON.h; sourceTree = "<group>"; };
 		2E75E3E01E41B4A600C4AF13 /* justapis.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = justapis.h; sourceTree = "<group>"; };
@@ -112,7 +112,7 @@
 		2E75E2DC1E3F2ED400C4AF13 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				2E75E2DB1E3F2ED400C4AF13 /* NSMQTTDemoCLI */,
+				2E75E2DB1E3F2ED400C4AF13 /* ns-mqtt-demo-cli */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -231,9 +231,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		2E75E2DA1E3F2ED400C4AF13 /* NSMQTTDemoCLI */ = {
+		2E75E2DA1E3F2ED400C4AF13 /* ns-mqtt-demo-cli */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 2E75E2E21E3F2ED400C4AF13 /* Build configuration list for PBXNativeTarget "NSMQTTDemoCLI" */;
+			buildConfigurationList = 2E75E2E21E3F2ED400C4AF13 /* Build configuration list for PBXNativeTarget "ns-mqtt-demo-cli" */;
 			buildPhases = (
 				2E75E2D71E3F2ED400C4AF13 /* Sources */,
 				2E75E2D81E3F2ED400C4AF13 /* Frameworks */,
@@ -243,9 +243,9 @@
 			);
 			dependencies = (
 			);
-			name = NSMQTTDemoCLI;
+			name = "ns-mqtt-demo-cli";
 			productName = "justapis-c-sdk-xc";
-			productReference = 2E75E2DB1E3F2ED400C4AF13 /* NSMQTTDemoCLI */;
+			productReference = 2E75E2DB1E3F2ED400C4AF13 /* ns-mqtt-demo-cli */;
 			productType = "com.apple.product-type.tool";
 		};
 /* End PBXNativeTarget section */
@@ -275,7 +275,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				2E75E2DA1E3F2ED400C4AF13 /* NSMQTTDemoCLI */,
+				2E75E2DA1E3F2ED400C4AF13 /* ns-mqtt-demo-cli */,
 			);
 		};
 /* End PBXProject section */
@@ -426,7 +426,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		2E75E2E21E3F2ED400C4AF13 /* Build configuration list for PBXNativeTarget "NSMQTTDemoCLI" */ = {
+		2E75E2E21E3F2ED400C4AF13 /* Build configuration list for PBXNativeTarget "ns-mqtt-demo-cli" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				2E75E2E31E3F2ED400C4AF13 /* Debug */,
