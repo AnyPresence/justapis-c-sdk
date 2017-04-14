@@ -5,48 +5,21 @@
 #ifndef JUSTAPIS_H
 #define JUSTAPIS_H
 
-
-///
-/// Build Options
-/// ------
-///
-
-/// JA_ENABLE_RESPONSE_CACHE
-/// 1: Build in support for automatic response caching (default)
-/// 0: Do not build in support for automatic response caching
-#ifndef JA_ENABLE_RESPONSE_CACHE
-  #define JA_ENABLE_RESPONSE_CACHE 1
-#endif
-
-/// JA_ENABLE_CJSON
-/// 1: Provides convenience features for JSON in requests and responses, using cJSON (default)
-/// 0: Removes convenience features for JSON in requests and responses.
-#ifndef JA_ENABLE_CJSON
-  #define JA_ENABLE_CJSON 1
-#endif
-
-/// JA_ENABLE_PUBLIC_KEY_PINNING
-/// 1: Provides fields and functions for public key pinning (default)
-/// 0: Removes fields and function for public key pinning
-#ifndef JA_ENABLE_PUBLIC_KEY_PINNING
-  #define JA_ENABLE_PUBLIC_KEY_PINNING 1
-#endif
-
-
 ///
 /// Includes
 /// ------
 ///
 
 #include <stdbool.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <sys/time.h>
+
+#include "mosquitto_config.h"
 
 #if JA_ENABLE_CJSON
   #include "cJSON.h"
 #endif
-
-
 
 ///
 /// Custom Allocators
@@ -190,9 +163,11 @@ typedef struct {
 /// Appends the provided data to the end of a buffer. If buffer is NULL, creates a new buffer. Returns the buffer.
 ja_simple_buffer* ja_simple_buffer_append(ja_simple_buffer* buffer, const char* data, size_t length);
 
+/// Creates a deep copy of the buffer. Returns NULL incase NULL is passed.
+ja_simple_buffer* ja_simple_buffer_copy(const ja_simple_buffer* buffer);
+
 /// Frees resources associated with a simple buffer
 void ja_simple_buffer_free(ja_simple_buffer* buffer);
-
 
 ///
 /// Request Callbacks
@@ -438,5 +413,185 @@ typedef struct {
 ja_result ja_perform_request(ja_gateway *gateway, const ja_request *request,
                         const ja_request_callbacks *callbacks);
 
+/// Convenience
+/// ------
+
+char* ja_str_copy(const char* str);
+
+#if JA_ENABLE_MQTT
+
+///MQTT
+/// ------
+
+typedef enum
+{
+    ja_mqtt_qos_0 = 0,
+    ja_mqtt_qos_1,
+    ja_mqtt_qos_2
+} ja_mqtt_qos;
+
+typedef enum
+{
+    ja_mqtt_error_success = 0,
+    ja_mqtt_error_unexpected = -1000
+} ja_mqtt_error;
+
+typedef struct
+{
+    int mid;
+    char* topic;
+    ja_simple_buffer* payload;
+    int qos;
+    bool retain;
+} ja_mqtt_message;
+
+/// Creates & returns a new message struct from the passed parameters.
+/// Deep copy of pointer-type parameters is made.
+/// Need to call `ja_mqtt_message_free` to release the memory allocated for struct & its pointer-type members.
+ja_mqtt_message* ja_mqtt_message_init(int mid, const char* topic, const char* data, size_t data_length, int qos, bool retain);
+
+/// Creates & returns a deep copy of the message struct.
+/// Need to call `ja_mqtt_message_free` to release the memory allocated for struct & its pointer-type members.
+ja_mqtt_message* ja_mqtt_message_copy(const ja_mqtt_message* message);
+
+/// Releases the memory allocated for struct & its pointer-type members.
+void ja_mqtt_message_free(ja_mqtt_message* message);
+
+struct _ja_mqtt_connection;
+typedef struct _ja_mqtt_connection ja_mqtt_connection;
+
+/// Callbacks for MQTT events.
+/// See `ja_mqtt_error` & `mosq_err_t` in `mosquitto.h` for possible values for error.
+/// Any parameters passed have ownership with the API code.
+/// Make a deep copy in case you need to use the parameters after callback has returned.
+typedef void (ja_mqtt_on_connect_callback)(ja_mqtt_connection* connection, int error);
+typedef void (ja_mqtt_on_disconnect_callback)(ja_mqtt_connection* connection, int error);
+typedef void (ja_mqtt_on_subscribe_callback)(ja_mqtt_connection* connection, int mid, const int* granted_qos, int granted_qos_count);
+typedef void (ja_mqtt_on_unsubscribe_callback)(ja_mqtt_connection* connection, int mid);
+typedef void (ja_mqtt_on_publish_callback)(ja_mqtt_connection* connection, int mid);
+typedef void (ja_mqtt_on_message_callback)(ja_mqtt_connection* connection, ja_mqtt_message* message);
+
+/// Configuration struct for MQTT Connection.
+typedef struct
+{
+    char* host;
+    unsigned short port;
+    char* client_id;
+    char* username;
+    char* password;
+    unsigned int keep_alive;
+    bool clean_session;
+    ja_mqtt_message* will_message;
+    
+    ja_mqtt_on_connect_callback* on_connect_callback;
+    ja_mqtt_on_disconnect_callback* on_disconnect_callback;
+    ja_mqtt_on_subscribe_callback* on_subscribe_callback;
+    ja_mqtt_on_unsubscribe_callback* on_unsubscribe_callback;
+    ja_mqtt_on_publish_callback* on_publish_callback;
+    ja_mqtt_on_message_callback* on_message_callback;
+} ja_mqtt_configuration;
+
+/// Creates & returns a new configuration struct from the passed parameters.
+/// Deep copy of pointer-type parameters is made.
+/// Need to call `ja_mqtt_configuration_free` to release the memory allocated for struct & its pointer-type members.
+ja_mqtt_configuration* ja_mqtt_configuration_init(const char* host,
+                                                  unsigned short port,
+                                                  const char* client_id,
+                                                  const char* username,
+                                                  const char* password,
+                                                  unsigned int keep_alive,
+                                                  bool clean_session,
+                                                  const ja_mqtt_message* will_message,
+                                                  ja_mqtt_on_connect_callback* on_connect_callback,
+                                                  ja_mqtt_on_disconnect_callback* on_disconnect_callback,
+                                                  ja_mqtt_on_subscribe_callback* on_subscribe_callback,
+                                                  ja_mqtt_on_unsubscribe_callback* on_unsubscribe_callback,
+                                                  ja_mqtt_on_publish_callback* on_publish_callback,
+                                                  ja_mqtt_on_message_callback* on_message_callback);
+
+/// Creates & returns a new configuration struct from the passed parameters.
+/// Deep copy of pointer-type parameters is made.
+/// Need to call `ja_mqtt_configuration_free` to release the memory allocated for struct & its pointer-type members.
+ja_mqtt_configuration* ja_mqtt_configuration_default(const char* host, const char* username, const char* password);
+
+/// Creates & returns a deep copy of the configuration struct.
+/// Need to call `ja_mqtt_message_free` to release the memory allocated for struct & its pointer-type members.
+ja_mqtt_configuration* ja_mqtt_configuration_copy(const ja_mqtt_configuration* config);
+
+/// Releases the memory allocated for struct & its pointer-type members.
+void ja_mqtt_configuration_free(ja_mqtt_configuration* config);
+
+/// Creates & returns a new connection struct from the passed parameters.
+/// Deep copy of pointer-type parameters is made.
+/// `error` parameter can be used to get info about error.
+/// See `ja_mqtt_error` & `mosq_err_t` in `mosquitto.h` for possible values of error.
+ja_mqtt_connection* ja_mqtt_connection_init(ja_mqtt_configuration* config, int* error);
+
+/// Releases the memory allocated for struct & its pointer-type members.
+void ja_mqtt_connection_free(ja_mqtt_connection* connection);
+
+/// Initiates the connection to MQTT Broker.
+/// `on_connect_callback` will be called when connection is established.
+/// Returns error code to indicate the result i.e. whether request was initiated or reason for failure.
+/// See `ja_mqtt_error` & `mosq_err_t` in `mosquitto.h` for possible values of error code.
+int ja_mqtt_connect(ja_mqtt_connection* connection);
+
+/// Runs once the main network loop for the client. You must call this frequently in order
+/// to keep communications between the client and broker working.
+/// Returns error code to indicate the result.
+/// See `ja_mqtt_error` & `mosq_err_t` in `mosquitto.h` for possible values of error code.
+int ja_mqtt_loop(ja_mqtt_connection* connection, int timeout);
+
+/// Continously runs the main network loop for the client.
+/// If you call disconnect in one of the callbacks, this will return.
+/// Returns error code to indicate the result.
+/// See `ja_mqtt_error` & `mosq_err_t` in `mosquitto.h` for possible values of error code.
+/// Returns error code to indicate the result.
+/// See `ja_mqtt_error` & `mosq_err_t` in `mosquitto.h` for possible values of error code.
+int ja_mqtt_loop_forever(ja_mqtt_connection* connection);
+
+#if JA_ENABLE_MQTT_WITH_THREADING
+
+/// Starts the main network loop for the client in a separate thread.
+/// Returns error code to indicate the result.
+/// See `ja_mqtt_error` & `mosq_err_t` in `mosquitto.h` for possible values of error code.
+int ja_mqtt_loop_start(ja_mqtt_connection* connection);
+
+/// Stops the main network loop for the client.
+/// Returns error code to indicate the result.
+/// You should do this after disconnection or send force = true.
+/// See `ja_mqtt_error` & `mosq_err_t` in `mosquitto.h` for possible values of error code.
+int ja_mqtt_loop_stop(ja_mqtt_connection* connection, bool force);
+
+#endif //JA_ENABLE_MQTT_WITH_THREADING
+
+/// Initiates the disconnection from MQTT Broker.
+/// `on_disconnect_callback` will be called when disconnected.
+/// Returns error code to indicate the result i.e. whether request was initiated or reason for failure.
+/// See `ja_mqtt_error` & `mosq_err_t` in `mosquitto.h` for possible values of error code.
+int ja_mqtt_disconnect(ja_mqtt_connection* connection);
+
+/// Initiates the request to subscribe to passed topic with qos.
+/// `on_subscribe_callback` will be called when subscribed.
+/// `mid` parameter is optional, can be used to get back message id.
+/// Returns error code to indicate the result i.e. whether request was initiated or reason for failure.
+/// See `ja_mqtt_error` & `mosq_err_t` in `mosquitto.h` for possible values of error code.
+int ja_mqtt_subscribe(ja_mqtt_connection* connection, const char* topic, int qos, int* mid);
+
+/// Initiates the request to unsubscribe from passed topic.
+/// `on_unsubscribe_callback` will be called when unsubscribed.
+/// `mid` parameter is optional, can be used to get back message id.
+/// Returns error code to indicate the result i.e. whether request was initiated or reason for failure.
+/// See `ja_mqtt_error` & `mosq_err_t` in `mosquitto.h` for possible values of error code.
+int ja_mqtt_unsubscribe(ja_mqtt_connection* connection, const char* topic, int* mid);
+
+/// Initiates the request to publish payload to topic with qos & retain.
+/// `on_publish_callback` will be called when published.
+/// `mid` parameter is optional, can be used to get back message id.
+/// Returns error code to indicate the result i.e. whether request was initiated or reason for failure.
+/// See `ja_mqtt_error` & `mosq_err_t` in `mosquitto.h` for possible values of error code.
+int ja_mqtt_publish(ja_mqtt_connection* connection, const char* topic, ja_simple_buffer* payload, int qos, bool retain, int* mid);
+
+#endif //JA_ENABLE_MQTT
 
 #endif //JUSTAPIS_H
